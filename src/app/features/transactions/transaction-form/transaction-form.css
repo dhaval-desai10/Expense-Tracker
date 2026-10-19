@@ -1,0 +1,39 @@
+:host {
+  display: block;
+}
+
+/* ─── Type Toggle (Income / Expense) ─────────────────────── */
+.type-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.type-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.type-toggle--income-active {
+  background: var(--color-income-muted);
+  border-color: rgba(52, 211, 153, 0.35);
+  color: var(--color-income);
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.1);
+}
+
+.type-toggle--expense-active {
+  background: var(--color-expense-muted);
+  border-color: rgba(251, 113, 133, 0.35);
+  color: var(--color-expense);
+  box-shadow: 0 0 20px rgba(251, 113, 133, 0.1);
+}

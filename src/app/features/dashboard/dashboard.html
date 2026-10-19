@@ -1,0 +1,772 @@
+<!-- ═══════════════════════════════════════════════════════════
+     Dashboard — Premium Financial Dashboard
+     ═══════════════════════════════════════════════════════════ -->
+
+<div class="dashboard-shell">
+  <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+
+    <!-- ────────── HEADER ────────── -->
+    <header class="animate-slide-down mb-10 flex flex-wrap items-center justify-between gap-5">
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">
+          <span class="gradient-text">{{ appName }}</span>
+        </h1>
+
+        <p class="mt-2 text-sm text-slate-400">
+          Your personal finance command centre — beautifully organised.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        id="add-transaction-btn"
+        (click)="startAddTransaction()"
+        class="btn-primary group flex items-center gap-2"
+      >
+        <svg class="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        Add Transaction
+      </button>
+    </header>
+
+    <!-- ────────── TRANSACTION FORM (Modal Overlay) ────────── -->
+    @if (showTransactionForm()) {
+      <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4 pt-20 animate-fade-in"
+           (click)="showTransactionForm.set(false)">
+        <section class="relative w-full max-w-2xl glass-card p-6 sm:p-8 animate-scale-in"
+                 (click)="$event.stopPropagation()">
+          <!-- Close button -->
+          <button
+            type="button"
+            id="close-form-btn"
+            (click)="showTransactionForm.set(false)"
+            class="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white"
+            aria-label="Close form"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          <div class="mb-6">
+            <h2 class="text-xl font-bold text-white">
+              {{ selectedTransaction() ? 'Edit Transaction' : 'New Transaction' }}
+            </h2>
+            <p class="mt-1 text-sm text-slate-400">
+              {{ selectedTransaction() ? 'Update the details below.' : 'Add a new income or expense entry.' }}
+            </p>
+          </div>
+
+          <app-transaction-form
+            [transaction]="selectedTransaction()"
+            (transactionSaved)="showTransactionForm.set(false)"
+            (cancelled)="showTransactionForm.set(false)"
+          />
+        </section>
+      </div>
+    }
+
+    <!-- ────────── SUMMARY CARDS ────────── -->
+    <section class="stagger-children mb-10 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+
+      <!-- Total Balance -->
+      <div class="summary-card summary-card--balance glass-card group p-6" id="card-balance">
+        <div class="flex items-start justify-between">
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Balance</p>
+            <h2 class="font-number mt-3 text-3xl font-bold tracking-tight text-white animate-count-up">
+              {{ totalBalance() | currency: 'INR' : 'symbol' : '1.0-2' }}
+            </h2>
+          </div>
+
+          <div class="card-icon card-icon--balance">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>
+          </div>
+        </div>
+
+        <p class="mt-4 text-xs text-slate-500">Net financial position</p>
+
+        <!-- Decorative glow -->
+        <div class="card-glow card-glow--balance" aria-hidden="true"></div>
+      </div>
+
+      <!-- Total Income -->
+      <div class="summary-card summary-card--income glass-card group p-6" id="card-income">
+        <div class="flex items-start justify-between">
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Income</p>
+            <h2 class="font-number mt-3 text-3xl font-bold tracking-tight text-[var(--color-income)] animate-count-up">
+              {{ totalIncome() | currency: 'INR' : 'symbol' : '1.0-2' }}
+            </h2>
+          </div>
+
+          <div class="card-icon card-icon--income">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+          </div>
+        </div>
+
+        <p class="mt-4 text-xs text-slate-500">Money received</p>
+        <div class="card-glow card-glow--income" aria-hidden="true"></div>
+      </div>
+
+      <!-- Total Expenses -->
+      <div class="summary-card summary-card--expense glass-card group p-6" id="card-expenses">
+        <div class="flex items-start justify-between">
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total Expenses</p>
+            <h2 class="font-number mt-3 text-3xl font-bold tracking-tight text-[var(--color-expense)] animate-count-up">
+              {{ totalExpenses() | currency: 'INR' : 'symbol' : '1.0-2' }}
+            </h2>
+          </div>
+
+          <div class="card-icon card-icon--expense">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2 14l7 7m0 0l7-7m-7 7V4" />
+            </svg>
+          </div>
+        </div>
+
+        <p class="mt-4 text-xs text-slate-500">Money spent</p>
+        <div class="card-glow card-glow--expense" aria-hidden="true"></div>
+      </div>
+
+    </section>
+
+    <!-- ────────── FINANCIAL ANALYTICS (Charts) ────────── -->
+    <section class="mb-10 animate-slide-up" style="animation-delay: 0.2s;">
+      <app-expense-charts [transactions]="transacations()" />
+    </section>
+
+    <!-- ────────── SPENDING BY CATEGORY ────────── -->
+    <section class="glass-card mb-10 p-6 animate-slide-up" id="spending-breakdown" style="animation-delay: 0.25s;">
+      <div class="mb-6">
+        <h2 class="text-lg font-bold text-white">Spending by Category</h2>
+        <p class="mt-1 text-sm text-slate-400">See where your money is going.</p>
+      </div>
+
+      @if (spendingByCategory().length > 0) {
+        <div class="space-y-5">
+          @for (item of spendingByCategory(); track item.category) {
+            <div>
+              <div class="mb-2 flex items-center justify-between gap-4 text-sm">
+                <span class="font-medium text-slate-300">
+                  {{ item.category }}
+                </span>
+                <span class="font-number font-semibold text-white">
+                  {{ item.total | currency: 'INR' : 'symbol' : '1.0-2' }}
+                </span>
+              </div>
+
+              <div class="h-2 overflow-hidden rounded-full bg-white/5">
+                <div
+                  class="h-full rounded-full animate-progress-fill origin-left"
+                  style="background: linear-gradient(90deg, #818cf8, #c084fc);"
+                  [style.width.%]="totalExpenses() > 0 ? (item.total / totalExpenses()) * 100 : 0"
+                ></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="py-8 text-center text-sm text-slate-500">
+          No expense transactions available for the spending breakdown.
+        </p>
+      }
+    </section>
+
+    <!-- ────────── LOADING STATE ────────── -->
+    @if (transactionService.isLoading()) {
+      <div class="mb-6 flex items-center gap-3 text-sm text-slate-400 animate-fade-in">
+        <div class="h-4 w-4 animate-spin rounded-full border-2 border-primary-400 border-t-transparent"></div>
+        Loading transactions…
+      </div>
+    }
+
+    <!-- ────────── ERROR STATE ────────── -->
+    @if (transactionService.errorMessage(); as error) {
+      <div class="mb-6 flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 px-5 py-4 text-sm text-rose-300 animate-scale-in">
+        <svg class="h-5 w-5 shrink-0 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        {{ error }}
+      </div>
+    }
+
+    <!-- ────────── RECENT TRANSACTIONS ────────── -->
+    <section class="glass-card overflow-hidden animate-slide-up" id="transactions-section" style="animation-delay: 0.3s;">
+
+      <!-- Section Header & Filters -->
+      <div class="border-b border-white/5 p-6">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-bold text-white">Recent Transactions</h2>
+            <p class="mt-1 text-sm text-slate-400">
+              A quick look at your latest financial activity.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- View Mode Switcher (Table vs Card Grid) -->
+            <div class="view-toggle" role="group" aria-label="Transaction View Mode">
+              <button
+                type="button"
+                id="view-table-btn"
+                (click)="setViewMode('table')"
+                class="view-toggle-btn"
+                [class.view-toggle-btn--active]="viewMode() === 'table'"
+                title="Table view"
+              >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+                Table
+              </button>
+
+              <button
+                type="button"
+                id="view-cards-btn"
+                (click)="setViewMode('cards')"
+                class="view-toggle-btn"
+                [class.view-toggle-btn--active]="viewMode() === 'cards'"
+                title="Card grid view"
+              >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+                Cards
+              </button>
+            </div>
+
+            <!-- Count Badge -->
+            <span class="badge badge-income font-number">
+              @if (filteredTransactions().length > 0) {
+                {{ paginationStart() }}–{{ paginationEnd() }} of {{ filteredTransactions().length }}
+              } @else {
+                0 transactions
+              }
+            </span>
+          </div>
+        </div>
+
+        <!-- Transaction Type Filters -->
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            id="filter-all"
+            (click)="setFilter('all')"
+            class="filter-chip"
+            [class.filter-chip--active]="selectedFilter() === 'all'"
+          >
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            All
+          </button>
+
+          <button
+            type="button"
+            id="filter-income"
+            (click)="setFilter('income')"
+            class="filter-chip"
+            [class.filter-chip--income]="selectedFilter() === 'income'"
+          >
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+            Income
+          </button>
+
+          <button
+            type="button"
+            id="filter-expense"
+            (click)="setFilter('expense')"
+            class="filter-chip"
+            [class.filter-chip--expense]="selectedFilter() === 'expense'"
+          >
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+            Expenses
+          </button>
+        </div>
+
+        <!-- Search -->
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <div class="relative min-w-0 flex-1">
+            <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="search"
+              id="search-transactions"
+              [value]="searchTerm()"
+              (input)="onSearchChange($any($event.target).value)"
+              placeholder="Search transactions by title…"
+              aria-label="Search transactions by title"
+              class="input-dark w-full pl-10"
+            />
+          </div>
+
+          @if (searchTerm()) {
+            <button
+              type="button"
+              id="clear-search-btn"
+              (click)="onSearchChange('')"
+              class="btn-ghost text-sm"
+            >
+              Clear
+            </button>
+          }
+        </div>
+
+        <!-- Date Range & Sort / Category Filters -->
+        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <!-- Start Date -->
+          <div class="flex flex-col gap-1.5">
+            <label for="startDate" class="text-xs font-semibold uppercase tracking-wider text-slate-500">From</label>
+            <input
+              id="startDate"
+              type="date"
+              [value]="startDate()"
+              [max]="endDate() || null"
+              (change)="onStartDateChange($any($event.target).value)"
+              class="input-dark"
+            />
+          </div>
+
+          <!-- End Date -->
+          <div class="flex flex-col gap-1.5">
+            <label for="endDate" class="text-xs font-semibold uppercase tracking-wider text-slate-500">To</label>
+            <input
+              id="endDate"
+              type="date"
+              [value]="endDate()"
+              [min]="startDate() || null"
+              (change)="onEndDateChange($any($event.target).value)"
+              class="input-dark"
+            />
+          </div>
+
+          <!-- Sort -->
+          <div class="flex flex-col gap-1.5">
+            <label for="transactionSort" class="text-xs font-semibold uppercase tracking-wider text-slate-500">Sort</label>
+            <select
+              id="transactionSort"
+              [value]="selectedSort()"
+              (change)="onSortChange($any($event.target).value)"
+              class="input-dark cursor-pointer"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="amountHigh">Amount: High → Low</option>
+              <option value="amountLow">Amount: Low → High</option>
+              <option value="title">Title: A → Z</option>
+            </select>
+          </div>
+
+          <!-- Category -->
+          <div class="flex flex-col gap-1.5">
+            <label for="transactionCategory" class="text-xs font-semibold uppercase tracking-wider text-slate-500">Category</label>
+            <select
+              id="transactionCategory"
+              [value]="selectedCategory()"
+              (change)="onCategoryChange($any($event.target).value)"
+              class="input-dark cursor-pointer"
+            >
+              <option value="all">All Categories</option>
+              @for (category of categories(); track category) {
+                <option [value]="category">{{ category }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Clear dates button -->
+        @if (startDate() || endDate()) {
+          <div class="mt-3">
+            <button
+              type="button"
+              id="clear-dates-btn"
+              (click)="onStartDateChange(''); onEndDateChange('')"
+              class="btn-ghost text-xs"
+            >
+              Clear Dates
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Transactions List / Cards -->
+      @if (filteredTransactions().length > 0) {
+
+        <!-- 1. TABLE VIEW -->
+        @if (viewMode() === 'table') {
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm" id="transactions-table">
+              <thead>
+                <tr class="border-b border-white/5 text-xs uppercase tracking-wider text-slate-500">
+                  <th class="px-6 py-4 font-semibold">Transaction</th>
+                  <th class="px-6 py-4 font-semibold">Category</th>
+                  <th class="px-6 py-4 font-semibold">Date</th>
+                  <th class="px-6 py-4 text-right font-semibold">Amount</th>
+                  <th class="px-6 py-4 text-center font-semibold">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                @for (transaction of paginatedTransactions(); track transaction.id) {
+                  <tr class="table-row-hover border-b border-white/[0.03] last:border-none">
+
+                    <!-- Transaction Name -->
+                    <td class="whitespace-nowrap px-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm"
+                          [class]="transaction.type === 'income'
+                            ? 'bg-[var(--color-income-muted)] text-[var(--color-income)]'
+                            : 'bg-[var(--color-expense-muted)] text-[var(--color-expense)]'"
+                        >
+                          @if (transaction.type === 'income') {
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                            </svg>
+                          } @else {
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                          }
+                        </div>
+
+                        <div>
+                          <p class="font-semibold text-white">{{ transaction.title }}</p>
+                          <p class="mt-0.5 text-xs capitalize text-slate-500">{{ transaction.type }}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Category -->
+                    <td class="whitespace-nowrap px-6 py-4">
+                      <span class="inline-flex rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-400">
+                        {{ transaction.category }}
+                      </span>
+                    </td>
+
+                    <!-- Date -->
+                    <td class="whitespace-nowrap px-6 py-4 text-slate-400">
+                      {{ transaction.date | date: 'dd MMM yyyy' }}
+                    </td>
+
+                    <!-- Amount -->
+                    <td
+                      class="font-number whitespace-nowrap px-6 py-4 text-right font-semibold"
+                      [class]="transaction.type === 'income' ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'"
+                    >
+                      {{ transaction.type === 'income' ? '+' : '-'
+                      }}{{ transaction.amount | currency: 'INR' : 'symbol' : '1.0-2' }}
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="whitespace-nowrap px-6 py-4 text-center">
+                      <div class="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          (click)="editTransaction(transaction)"
+                          class="action-btn action-btn--edit tooltip-trigger"
+                          data-tooltip="Edit"
+                          aria-label="Edit transaction"
+                        >
+                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+
+                        <button
+                          type="button"
+                          (click)="transactionService.deleteTransaction(transaction.id)"
+                          class="action-btn action-btn--delete tooltip-trigger"
+                          data-tooltip="Delete"
+                          aria-label="Delete transaction"
+                        >
+                          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <!-- 2. CARD GRID VIEW -->
+        @if (viewMode() === 'cards') {
+          <div class="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            @for (transaction of paginatedTransactions(); track transaction.id) {
+              <div
+                class="tx-card flex flex-col justify-between"
+                [class.tx-card--income]="transaction.type === 'income'"
+                [class.tx-card--expense]="transaction.type === 'expense'"
+              >
+                <!-- Card Header -->
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div
+                      class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm"
+                      [class]="transaction.type === 'income'
+                        ? 'bg-[var(--color-income-muted)] text-[var(--color-income)]'
+                        : 'bg-[var(--color-expense-muted)] text-[var(--color-expense)]'"
+                    >
+                      @if (transaction.type === 'income') {
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                      } @else {
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                        </svg>
+                      }
+                    </div>
+
+                    <div class="min-w-0">
+                      <h4 class="truncate font-semibold text-white" [title]="transaction.title">
+                        {{ transaction.title }}
+                      </h4>
+                      <p class="mt-0.5 text-xs text-slate-500">
+                        {{ transaction.date | date: 'dd MMM yyyy' }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span class="inline-flex shrink-0 rounded-lg bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-400">
+                    {{ transaction.category }}
+                  </span>
+                </div>
+
+                <!-- Card Body: Amount & Actions -->
+                <div class="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
+                  <div>
+                    <span class="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Amount</span>
+                    <span
+                      class="font-number text-base font-bold"
+                      [class]="transaction.type === 'income' ? 'text-[var(--color-income)]' : 'text-[var(--color-expense)]'"
+                    >
+                      {{ transaction.type === 'income' ? '+' : '-'
+                      }}{{ transaction.amount | currency: 'INR' : 'symbol' : '1.0-2' }}
+                    </span>
+                  </div>
+
+                  <div class="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      (click)="editTransaction(transaction)"
+                      class="action-btn action-btn--edit tooltip-trigger"
+                      data-tooltip="Edit"
+                      aria-label="Edit transaction"
+                    >
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="transactionService.deleteTransaction(transaction.id)"
+                      class="action-btn action-btn--delete tooltip-trigger"
+                      data-tooltip="Delete"
+                      aria-label="Delete transaction"
+                    >
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- 3. PAGINATOR TOOLBAR -->
+        <div class="paginator-bar">
+          <!-- Left: Page Info & Page Size Selector -->
+          <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+            <span>
+              Showing
+              <strong class="font-number text-white">{{ paginationStart() }}–{{ paginationEnd() }}</strong>
+              of
+              <strong class="font-number text-white">{{ filteredTransactions().length }}</strong>
+            </span>
+
+            <span class="text-slate-600">|</span>
+
+            <div class="flex items-center gap-1.5">
+              <label for="pageSizeSelect" class="text-slate-400">Show:</label>
+              <select
+                id="pageSizeSelect"
+                [value]="pageSize()"
+                (change)="changePageSize(+$any($event.target).value)"
+                class="input-dark cursor-pointer rounded-lg px-2 py-1 text-xs"
+              >
+                <option [value]="5">5</option>
+                <option [value]="8">8</option>
+                <option [value]="15">15</option>
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Center: Page Totals Insight -->
+          <div class="hidden items-center gap-2 text-xs md:flex">
+            <span class="text-slate-500">Page summary:</span>
+            <span class="font-number font-semibold text-[var(--color-income)]">
+              +{{ pageIncome() | currency: 'INR' : 'symbol' : '1.0-0' }}
+            </span>
+            <span class="text-slate-600">/</span>
+            <span class="font-number font-semibold text-[var(--color-expense)]">
+              -{{ pageExpense() | currency: 'INR' : 'symbol' : '1.0-0' }}
+            </span>
+          </div>
+
+          <!-- Right: Page Navigation Buttons -->
+          <div class="flex items-center gap-1.5" role="navigation" aria-label="Pagination">
+            <!-- First Page -->
+            <button
+              type="button"
+              (click)="goToPage(1)"
+              [disabled]="currentPage() === 1"
+              class="paginator-btn"
+              title="First page"
+              aria-label="First page"
+            >
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
+              </svg>
+            </button>
+
+            <!-- Previous Page -->
+            <button
+              type="button"
+              (click)="prevPage()"
+              [disabled]="currentPage() === 1"
+              class="paginator-btn"
+              title="Previous page"
+              aria-label="Previous page"
+            >
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+            </button>
+
+            <!-- Page Number Buttons -->
+            @for (p of pageNumbers(); track $index) {
+              @if (p === '...') {
+                <span class="px-1 text-xs text-slate-500">…</span>
+              } @else {
+                <button
+                  type="button"
+                  (click)="goToPage(p)"
+                  class="paginator-btn font-number"
+                  [class.paginator-btn--active]="currentPage() === p"
+                  [attr.aria-current]="currentPage() === p ? 'page' : null"
+                >
+                  {{ p }}
+                </button>
+              }
+            }
+
+            <!-- Next Page -->
+            <button
+              type="button"
+              (click)="nextPage()"
+              [disabled]="currentPage() === totalPages()"
+              class="paginator-btn"
+              title="Next page"
+              aria-label="Next page"
+            >
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
+
+            <!-- Last Page -->
+            <button
+              type="button"
+              (click)="goToPage(totalPages())"
+              [disabled]="currentPage() === totalPages()"
+              class="paginator-btn"
+              title="Last page"
+              aria-label="Last page"
+            >
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      } @else {
+        <!-- Empty State -->
+        <div class="px-6 py-20 text-center animate-fade-in">
+          <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 text-slate-500">
+            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+            </svg>
+          </div>
+
+          @if (transacations().length === 0) {
+            <h3 class="mt-5 font-semibold text-white">No transactions yet</h3>
+            <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-400">
+              Your income and expenses will appear here once you add your first transaction.
+            </p>
+          } @else {
+            <h3 class="mt-5 font-semibold text-white">
+              @if (searchTerm().trim()) {
+                No matching transactions
+              } @else {
+                No transactions to display
+              }
+            </h3>
+
+            <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-400">
+              @if (searchTerm().trim()) {
+                No transactions match "{{ searchTerm() }}". Try another search term or change the
+                selected filter.
+              } @else if (selectedFilter() !== 'all') {
+                There are no
+                {{ selectedFilter() === 'income' ? 'income' : 'expense' }}
+                transactions to display. Try selecting another filter.
+              } @else {
+                Your transactions will appear here once you add your first transaction.
+              }
+            </p>
+
+            <button
+              type="button"
+              id="reset-filters-btn"
+              (click)="resetFilters()"
+              class="btn-primary mt-6 text-sm"
+            >
+              Reset Search &amp; Filter
+            </button>
+          }
+        </div>
+      }
+
+    </section>
+
+    <!-- ────────── FOOTER ────────── -->
+    <footer class="mt-12 pb-8 text-center text-xs text-slate-600 animate-fade-in" style="animation-delay: 0.5s;">
+      <p>Built with ❤ — Expense Tracker &copy; {{ currentYear }}</p>
+    </footer>
+
+  </div>
+</div>
